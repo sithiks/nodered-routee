@@ -1,0 +1,778 @@
+//createCall
+<script type="text/javascript">
+    RED.nodes.registerType('createcall', {
+        category: 'nexmo',
+        color: '#35be8b',
+        defaults: {
+            creds: { value: "", type: "nexmovoiceapp" },
+            endpoint: {},
+            to: {},
+            dtmfanswer: {},
+            wsuri: {},
+            contenttype: {},
+            headers: {},
+            sipuri: {},
+            extension: {},
+            from: {},
+            ringingtimer: {},
+            lengthtimer: {},
+            machinedetection: {},
+            answer: {},
+            answertype: {},
+            eventurl: {},
+            eventmethod: {}
+        },
+        inputs: 1,
+        outputs: 1,
+        icon: "nexmo.png",
+        label: "Create Call",
+        paletteLabel: "Create Call",
+        oneditprepare: function () {
+            const frominput = document.getElementById("node-input-from-input");
+            const input = document.getElementById("node-input-from");
+            frominput.value = input.value;
+            frominput.addEventListener("focus", () => {
+                const chevron = document.getElementById("node-input-get-numbers");
+                const close = document.getElementById("node-input-clear-number");
+                chevron.style.display = "none";
+                close.style.display = "block";
+            })
+            $("#node-input-answertype").val(this.answertype);
+            $("#node-input-answer").typedInput({
+                default: 'url',
+                typeField: $("#node-input-answertype"),
+                types: ['json', { value: "url", label: "URL" }, { value: "fixed", label: "msg.ncco", hasValue: false }]
+            });
+        },
+        oneditsave: function () {
+            const frominput = document.getElementById("node-input-from-input");
+            const select = document.getElementById("node-input-from-select");
+            const input = document.getElementById("node-input-from");
+            input.value = select.value || frominput.value;
+        }
+    });
+</script>
+
+<script type="text/x-red" data-template-name="createcall">
+
+  <div class="form-row">
+      <label for="node-config-input-privatekey"></i>Nexmo Credentials</label>
+      <input type="text" id="node-input-creds" >
+  </div>
+      
+  <div class="form-row">
+      <label for="node-input-endpoint"><i class="fa fa-tasks"></i>Endpoint</label>
+      <select type="text" id="node-input-endpoint" style="width:70%;" onchange="toggleEndpointRest(this.value)">
+        <option value="phone">Phone</option>
+        <option value="sip">SIP</option>
+        <option value="websocket">Websocket</option>
+        <option value="vbc">VBC Extension</option>
+    
+       </select>
+  </div>
+  
+  <div id="phone" style="display: none;">
+    <div class="form-row" >
+       <label for="node-input-to"><i class="icon-tag"></i>Number {}</label>
+       <input type="text" id="node-input-to" placeholder="number">
+    </div>
+    <div class="form-row" >
+       <label for="node-input-dtmfanswer"><i class="icon-tag"></i>dtmfAnswer {}</label>
+       <input type="text" id="node-input-dtmfanswer" placeholder="digits">
+    </div>
+  </div>
+  
+  <div id="websocket" style="display: none;">
+    <div class="form-row">
+      <label for="node-input-wsuri"><i class="icon-tag"></i>URI {}</label>
+      <input type="text" id="node-input-wsuri" placeholder="wss://example.com/socket">
+    </div>
+    <div class="form-row">
+        <label for="node-input-contenttype"><i class="fa fa-tasks"></i>Sample Rate</label>
+        <select type="text" id="node-input-contenttype" style="width:70%;">
+          <option value="audio/l16;rate=16000">16Khz</option>
+          <option value="audio/l16;rate=8000">8Khz</option>
+         </select>
+    </div>
+    <div class="form-row">
+      <label for="node-input-headers"><i class="icon-tag"></i>Headers {}</label>
+      <input type="text" id="node-input-headers" placeholder='{"foo" : "bar"}'>
+    </div>
+  </div>
+  
+  <div id="sip" style="display: none;">
+    <div class="form-row">
+      <label for="node-input-sipuri"><i class="icon-tag"></i>URI {}</label>
+      <input type="text" id="node-input-sipuri" placeholder="sip:1000@example.com">
+    </div>
+  </div>
+      
+  <div id="vbc" style="display: none;">
+    <div class="form-row">
+      <label for="node-input-extension"><i class="icon-tag"></i>Extension {}</label>
+      <input type="text" id="node-input-extension" placeholder="1234">
+    </div>
+  </div>
+    
+    <div class="form-row">
+        <label for="node-input-from"><i class="icon-tag"></i>From {}</label>
+        <div style="display: inline-block; position: relative; width: 70%; height: 20px;">
+            <div style="position: absolute; left: 0px; right: 40px;">
+                <select type="text" id="node-input-from-select" style="width:100%; display: none;"></select>
+                </select>
+                <input type="text" id="node-input-from-input" style="width:100%;" placeholder="From Number">
+                <input type="hidden" id="node-input-from">
+            </div>
+        
+        <a id="node-input-get-numbers" title="Lookup My Numbers" class="red-ui-button" style="position: absolute; right: 0px; top: 0px;" onclick="getnumbers()"><i class="fa fa-list"></i></a>
+        <a id="node-input-clear-number" title="Clear" class="red-ui-button" style="position: absolute; right: 0px; top: 0px; display:none;" onclick="clearnumber()"><i class="fa fa-times"></i></a>
+        <a id="node-input-edit-number" title="Switch to Manual Entry" class="red-ui-button" style="position: absolute; right: 0px; top: 0px; display:none;" onclick="editnumber()"><i class="fa fa-user-plus"></i></a>
+        </div>
+    </div>
+    
+   
+    <div class="form-row">
+        <label for="node-input-answer"><i class="icon-tag"></i>Answer {}</label>
+        <input type="text" id="node-input-answer">
+        <input type="hidden" id="node-input-answertype">
+      
+    </div>
+   
+   
+    <div class="form-row">
+        <label for="node-input-ringingtimer"><i class="icon-tag"></i>Ringing Timer {}</label>
+        <input type="number" id="node-input-ringingtimer" placeholder="60">
+    </div>
+    
+     
+    <div class="form-row">
+        <label for="node-input-lengthtimer"><i class="icon-tag"></i>Length Timer {}</label>
+        <input type="number" id="node-input-lengthtimer" placeholder="7200">
+    </div>
+    
+    
+    <div class="form-row">
+        <label for="node-input-machinedetection"><i class="fa fa-tasks"></i>Machine Detection</label>
+        <select type="text" id="node-input-machinedetection" style="width:70%;">
+          <option value="">none</option>
+          <option value="continue">continue</option>
+          <option value="hangup">hangup</option>
+         </select>
+    </div>
+    
+   
+    <div class="form-row">
+        <label for="node-input-eventurl"><i class="icon-tag"></i>Event URL {}</label>
+        <input type="text" id="node-input-eventurl" placeholder="/url">
+    </div>
+   
+    <div class="form-row">
+        <label for="node-input-eventmethod"><i class="fa fa-tasks"></i>Method</label>
+        <select type="text" id="node-input-eventmethod" style="width:70%;">
+          <option value="GET">GET</option>
+          <option value="POST">POST</option>
+         </select>
+    </div>
+</script>
+
+<script>
+    function toggleEndpointRest(endpoint) {
+        if (endpoint == 'phone') {
+            document.getElementById("phone").style.display = "block";
+            document.getElementById("websocket").style.display = "none";
+            document.getElementById("sip").style.display = "none";
+            document.getElementById("vbc").style.display = "none";
+
+        }
+        else if (endpoint == 'websocket') {
+            document.getElementById("phone").style.display = "none";
+            document.getElementById("websocket").style.display = "block";
+            document.getElementById("sip").style.display = "none";
+            document.getElementById("vbc").style.display = "none";
+
+        } else if (endpoint == 'sip') {
+            document.getElementById("phone").style.display = "none";
+            document.getElementById("websocket").style.display = "none";
+            document.getElementById("sip").style.display = "block";
+            document.getElementById("vbc").style.display = "none";
+        } else if (endpoint == 'vbc') {
+            document.getElementById("phone").style.display = "none";
+            document.getElementById("websocket").style.display = "none";
+            document.getElementById("sip").style.display = "none";
+            document.getElementById("vbc").style.display = "block";
+        }
+    }
+</script>
+
+<script type="text/x-red" data-help-name="createcall">
+<p>Create a new Outbound Call</p>
+
+<h3>Inputs</h3>
+
+ <h3>Outputs</h3>
+ <dl class="message-properties">
+     <dt>ncco<span class="property-type">object</span></dt>
+     <dd> <code>msg.payload</code> will contain the response from the Nexmo API</dd>
+ </dl>
+
+<h3>Details</h3>
+Create a new outbound call
+
+<h3>References</h3>
+    <ul>
+        <li><a href="https://developer.nexmo.com/api/voice#createCall">Nexmo API Reference</a></li>
+    </ul>
+</script>
+
+//getrecording
+<script type="text/javascript">
+    RED.nodes.registerType('getrecording', {
+        category: 'nexmo',
+        color: '#35be8b',
+        defaults: {
+            creds: { value: "", type: "nexmovoiceapp" },
+            filename: {}
+        },
+        inputs: 1,
+        outputs: 1,
+        icon: "nexmo.png",
+        label: "Get Recording",
+        paletteLabel: "Get Recording"
+    });
+</script>
+<script type="text/x-red" data-template-name="getrecording">
+  <div class="form-row">
+      <label for="node-config-input-creds"></i>Nexmo Credentials</label>
+      <input type="text" id="node-input-creds">
+  </div>
+  <div class="form-row">
+      <label for="node-input-filename"><i class="icon-tag"></i>Filename {}</label>
+      <input type="text" id="node-input-filename" placeholder="Filename">
+  </div>
+</script>
+
+<script type="text/x-red" data-help-name="getrecording">
+<p>Fetch a recording</p>
+
+<h3>Inputs</h3>
+    <dl class="message-properties">
+        <dt>call<span class="property-type">object</span></dt>
+        <dd> The output of a webhook , which contains details of the call recording in msg.payload </dd>
+    </dl>
+
+ <h3>Outputs</h3>
+ <dl class="message-properties">
+     <dt>msg.payload<span class="property-type">object</span></dt>
+     <dd> The recording audio</dd>
+     <dt>msg.filename<span class="property-type">string</span></dt>
+     <dd>msg.filename will be set to whatever you enter so that you can connect into a  file node to write to disk </dd>
+ </dl>
+
+<h3>Details</h3>
+Fetch the recording audio from a URL supplied in a recording event webhook
+Note, this node does not write the audio to disk, the filename field is there to allow the setting of msg.filename so that when connected to a file node the audio will be saved
+</script>
+
+
+
+//earmuff
+<script type="text/javascript">
+    RED.nodes.registerType('earmuff', {
+        category: 'nexmo',
+        color: '#35be8b',
+        defaults: {
+          creds: {value:"", type:"nexmovoiceapp"},
+          calluuid: {},
+          state:{}
+        },
+        inputs: 1,
+        outputs: 1,
+        icon: "nexmo.png",
+        label: "Earmuff",
+        paletteLabel: "Earmuff"
+    });
+</script>
+<script type="text/x-red" data-template-name="earmuff">
+  <div class="form-row">
+      <label for="node-config-input-privatekey"></i>Nexmo Credentials</label>
+      <input type="text" id="node-input-creds" >
+  </div>
+  
+  <div class="form-row">
+      <label for="node-input-calluuid"><i class="icon-tag"></i>Call UUID {}</label>
+      <input type="text" id="node-input-calluuid" placeholder="UUID">
+  </div>
+  
+  <div class="form-row">
+      <label for="node-input-state"><i class="fa fa-tasks"></i>Status</label>
+      <select type="text" id="node-input-state" style="width:70%;">
+      <option value="on">Earmuff On</option>
+      <option value="off">Earmuff Off (unearmuff)</option>
+       </select>
+  </div>
+  
+</script>
+
+<script type="text/x-red" data-help-name="earmuff">
+<p>Earmuff a Call</p>
+
+<h3>Inputs</h3>
+
+ <h3>Outputs</h3>
+ <dl class="message-properties">
+     <dt>ncco<span class="property-type">object</span></dt>
+     <dd> <code>msg.payload</code> will contain the response from the Nexmo API</dd>
+ </dl>
+
+<h3>Details</h3>
+Earmuff a call leg
+
+<h3>References</h3>
+    <ul>
+        <li><a href="https://developer.nexmo.com/api/voice#updateCall">Nexmo API Reference</a></li>
+    </ul>
+</script>
+
+//mute
+<script type="text/javascript">
+    RED.nodes.registerType('mute', {
+        category: 'nexmo',
+        color: '#35be8b',
+        defaults: {
+          creds: {value:"", type:"nexmovoiceapp"},
+          calluuid: {},
+          state:{}
+        },
+        inputs: 1,
+        outputs: 1,
+        icon: "nexmo.png",
+        label: "Mute",
+        paletteLabel : "Mute"
+    });
+</script>
+<script type="text/x-red" data-template-name="mute">
+  <div class="form-row">
+      <label for="node-config-input-privatekey"></i>Nexmo Credentials</label>
+      <input type="text" id="node-input-creds" >
+  </div>
+  
+  <div class="form-row">
+      <label for="node-input-calluuid"><i class="icon-tag"></i>Call UUID {}</label>
+      <input type="text" id="node-input-calluuid" placeholder="UUID">
+  </div>
+  
+  <div class="form-row">
+      <label for="node-input-state"><i class="fa fa-tasks"></i>Status</label>
+      <select type="text" id="node-input-state" style="width:70%;">
+      <option value="on">Mute On</option>
+      <option value="off">Mute Off (unmute)</option>
+       </select>
+  </div>
+  
+</script>
+
+<script type="text/x-red" data-help-name="mute">
+<p>Mute a Call</p>
+
+<h3>Inputs</h3>
+
+ <h3>Outputs</h3>
+ <dl class="message-properties">
+     <dt>ncco<span class="property-type">object</span></dt>
+     <dd> <code>msg.payload</code> will contain the response from the Nexmo API</dd>
+ </dl>
+
+<h3>Details</h3>
+Mute a call leg
+
+<h3>References</h3>
+    <ul>
+        <li><a href="https://developer.nexmo.com/api/voice#updateCall">Nexmo API Reference</a></li>
+    </ul>
+</script>
+
+
+//hangup
+<script type="text/javascript">
+    RED.nodes.registerType('hangup', {
+        category: 'nexmo',
+        color: '#35be8b',
+        defaults: {
+            creds: { value: "", type: "nexmovoiceapp" },
+            calluuid: {}
+        },
+        inputs: 1,
+        outputs: 1,
+        icon: "nexmo.png",
+        label: "Hangup",
+        paletteLabel : "Hangup"
+    });
+</script>
+<script type="text/x-red" data-template-name="hangup">
+  <div class="form-row">
+      <label for="node-config-input-privatekey"></i>Nexmo Credentials</label>
+      <input type="text" id="node-input-creds" >
+  </div>
+  
+  <div class="form-row">
+      <label for="node-input-calluuid"><i class="icon-tag"></i>Call UUID {}</label>
+      <input type="text" id="node-input-calluuid" placeholder="UUID">
+  </div>
+</script>
+
+<script type="text/x-red" data-help-name="hangup">
+<p>Hangup a Call</p>
+
+<h3>Inputs</h3>
+
+ <h3>Outputs</h3>
+ <dl class="message-properties">
+     <dt>ncco<span class="property-type">object</span></dt>
+     <dd> <code>msg.payload</code> will contain the response from the Nexmo API</dd>
+ </dl>
+
+<h3>Details</h3>
+Hangup a call leg.
+
+<h3>References</h3>
+    <ul>
+        <li><a href="https://developer.nexmo.com/api/voice#updateCall">Nexmo API Reference</a></li>
+    </ul>
+</script>
+
+
+//transfer
+<script type="text/javascript">
+    RED.nodes.registerType('transfer', {
+        category: 'nexmo',
+        color: '#35be8b',
+        defaults: {
+          creds: {value:"", type:"nexmovoiceapp"},
+          calluuid: {},
+          ncco: {},
+          nccotype: {}
+        },
+        inputs: 1,
+        outputs: 1,
+        icon: "nexmo.png",
+        label: "Transfer",
+        paletteLabel: "Transfer",
+        oneditprepare: function() {
+            $("#node-input-nccotype").val(this.nccotype);
+            $("#node-input-ncco").typedInput({
+                default: 'url',
+                typeField: $("#node-input-nccotype"),
+                types: ['json',{value:"url",label:"URL"},{value:"fixed",label:"msg.ncco",hasValue:false}]
+            });
+        }
+    });
+</script>
+
+<script type="text/x-red" data-template-name="transfer">
+  <div class="form-row">
+      <label for="node-config-input-privatekey"></i>Nexmo Credentials</label>
+      <input type="text" id="node-input-creds" >
+  </div>
+  
+  <div class="form-row">
+      <label for="node-input-calluuid"><i class="icon-tag"></i>Call UUID {}</label>
+      <input type="text" id="node-input-calluuid" placeholder="UUID">
+  </div>
+  
+  <div class="form-row">
+      <label for="node-input-ncco"><i class="icon-tag"></i>New NCCO {}</label>
+      <input type="text" id="node-input-ncco">
+      <input type="hidden" id="node-input-nccotype">
+  </div>
+
+  
+</script>
+
+<script type="text/x-red" data-help-name="transfer">
+<p>Transfer a Call to a new NCCO</p>
+
+<h3>Inputs</h3>
+
+ <h3>Outputs</h3>
+ <dl class="message-properties">
+     <dt>ncco<span class="property-type">object</span></dt>
+     <dd> <code>msg.payload</code> will contain the response from the Nexmo API</dd>
+ </dl>
+
+<h3>Details</h3>
+Will transfer a call leg to a new NCCO, you need to supply the URL which will serve the new NCCO response.
+<h3>References</h3>
+    <ul>
+        <li><a href="https://developer.nexmo.com/api/voice#updateCall">Nexmo API Reference</a></li>
+    </ul>
+</script>
+
+
+//playaudio
+<script type="text/javascript">
+    RED.nodes.registerType('playaudio', {
+        category: 'nexmo',
+        color: '#35be8b',
+        defaults: {
+            creds: { value: "", type: "nexmovoiceapp" },
+            calluuid: {},
+            action: {},
+            url: {},
+            loop: { value: 1 },
+            level: { value: 0 }
+        },
+        inputs: 1,
+        outputs: 1,
+        icon: "nexmo.png",
+        label: "Play Audio",
+        paletteLabel: "Play Audio"
+    });
+</script>
+<script type="text/x-red" data-template-name="playaudio">
+  <div class="form-row">
+      <label for="node-config-input-privatekey"></i>Nexmo Credentials</label>
+      <input type="text" id="node-input-creds" >
+  </div>
+  
+  <div class="form-row">
+      <label for="node-input-calluuid"><i class="icon-tag"></i>Call UUID {}</label>
+      <input type="text" id="node-input-calluuid" placeholder="UUID">
+  </div>
+  
+  <div class="form-row">
+      <label for="node-input-action"><i class="fa fa-tasks"></i>Action</label>
+      <select type="text" id="node-input-action" style="width:70%;">
+      <option value="on">Start Playing Audio File</option>
+      <option value="off">Stop Playing Audio File</option>
+       </select>
+  </div>
+  
+  <div class="form-row">
+      <label for="node-input-url"><i class="icon-tag"></i>Audio File URL {}</label>
+      <input type="text" id="node-input-url" placeholder="url">
+  </div>
+  <div class="form-row">
+      <label for="node-input-loop"><i class="icon-tag"></i>Loop</label>
+      <input type="text" id="node-input-loop">
+  </div>
+  
+  <div class="form-row">
+      <label for="node-input-level"><i class="icon-tag"></i>Level</label>
+      <input type="text" id="node-input-level">
+  </div>
+</script>
+
+
+<script type="text/x-red" data-help-name="playaudio">
+<p>Play audio into a call</p>
+
+<h3>Inputs</h3>
+
+ <h3>Outputs</h3>
+ <dl class="message-properties">
+     <dt>ncco<span class="property-type">object</span></dt>
+     <dd> <code>msg.payload</code> will contain the response from the Nexmo API</dd>
+ </dl>
+
+<h3>Details</h3>
+Play an audio file into a call
+
+<h3>References</h3>
+    <ul>
+        <li><a href="https://developer.nexmo.com/api/voice#startStream">Nexmo API Reference</a></li>
+    </ul>
+</script>
+
+
+//playtts
+<script type="text/javascript">
+    RED.nodes.registerType('playtts', {
+        category: 'nexmo',
+        color: '#35be8b',
+        defaults: {
+            creds: { value: "", type: "nexmovoiceapp" },
+            calluuid: {},
+            action: {},
+            text: {},
+            voicename: { value: "kimberly" },
+            loop: { value: 1 },
+            level: { value: 0 }
+        },
+        inputs: 1,
+        outputs: 1,
+        icon: "nexmo.png",
+        label: "Play TTS",
+        paletteLabel: "Play TTS"
+    });
+</script>
+
+<script type="text/x-red" data-template-name="playtts">
+  <div class="form-row">
+      <label for="node-config-input-privatekey"></i>Nexmo Credentials</label>
+      <input type="text" id="node-input-creds" >
+  </div>
+  
+  <div class="form-row">
+      <label for="node-input-calluuid"><i class="icon-tag"></i>Call UUID {}</label>
+      <input type="text" id="node-input-calluuid" placeholder="UUID">
+  </div>
+  
+  <div class="form-row">
+      <label for="node-input-action"><i class="fa fa-tasks"></i>Action</label>
+      <select type="text" id="node-input-action" style="width:70%;">
+      <option value="on">Start Speaking Text</option>
+      <option value="off">Stop Speaking Text</option>
+       </select>
+  </div>
+  
+  <div class="form-row">
+      <label for="node-input-text"><i class="icon-tag"></i>text {}</label>
+      <input type="text" id="node-input-text" placeholder="url">
+  </div>
+  
+  <div class="form-row">
+      <label for="node-input-voicename"><i class="icon-tag"></i>Voice Name {}</label>
+      <input type="text" id="node-input-voicename" placeholder="Kimblerly">
+  </div>
+  
+  
+  <div class="form-row">
+      <label for="node-input-loop"><i class="icon-tag"></i>Loop</label>
+      <input type="text" id="node-input-loop">
+  </div>
+  
+  <div class="form-row">
+      <label for="node-input-level"><i class="icon-tag"></i>Level</label>
+      <input type="text" id="node-input-level">
+  </div>
+</script>
+
+<script type="text/x-red" data-help-name="playtts">
+<p>Play text to speech into a call</p>
+
+<h3>Inputs</h3>
+
+ <h3>Outputs</h3>
+ <dl class="message-properties">
+     <dt>ncco<span class="property-type">object</span></dt>
+     <dd> <code>msg.payload</code> will contain the response from the Nexmo API</dd>
+ </dl>
+
+<h3>Details</h3>
+Play text to speech into a call
+
+<h3>References</h3>
+    <ul>
+        <li><a href="https://developer.nexmo.com/api/voice#startTalk">Nexmo API Reference</a></li>
+    </ul>
+</script>
+
+//playdtmf
+
+<script type="text/javascript">
+    RED.nodes.registerType('playdtmf', {
+        category: 'nexmo',
+        color: '#35be8b',
+        defaults: {
+            creds: { value: "", type: "nexmovoiceapp" },
+            calluuid: {},
+            digits: {}
+        },
+        inputs: 1,
+        outputs: 1,
+        icon: "nexmo.png",
+        label: "Play DTMF",
+        paletteLabel: "Play DTMF"
+    });
+</script>
+<script type="text/x-red" data-template-name="playdtmf">
+  <div class="form-row">
+      <label for="node-config-input-privatekey"></i>Nexmo Credentials</label>
+      <input type="text" id="node-input-creds" >
+  </div>
+  
+  <div class="form-row">
+      <label for="node-input-calluuid"><i class="icon-tag"></i>Call UUID {}</label>
+      <input type="text" id="node-input-calluuid" placeholder="UUID">
+  </div>
+  
+  <div class="form-row">
+      <label for="node-input-digits"><i class="icon-tag"></i>Digits {}</label>
+      <input type="text" id="node-input-digits">
+  </div>
+</script>
+
+
+<script type="text/x-red" data-help-name="playdtmf">
+<p>Play DTMF into a call</p>
+
+<h3>Inputs</h3>
+
+ <h3>Outputs</h3>
+ <dl class="message-properties">
+     <dt>ncco<span class="property-type">object</span></dt>
+     <dd> <code>msg.payload</code> will contain the response from the Nexmo API</dd>
+ </dl>
+
+<h3>Details</h3>
+Play DTMF tones  into a call
+
+<h3>References</h3>
+    <ul>
+        <li><a href="https://developer.nexmo.com/api/voice#startDTMF">Nexmo API Reference</a></li>
+    </ul>
+</script>
+
+<script>
+
+    function getnumbers() {
+        var url = 'nexmo-auth/numbers';
+        var params = {
+            creds: document.getElementById("node-input-creds").value,
+        }
+
+        $.get(url, params, function (res) {
+            var select = document.getElementById("node-input-from-select");
+            while (select.options.length > 0) {
+                select.remove(0);
+            }
+            for (let index = 0; index < res.length; index++) {
+                const option = document.createElement("option");
+                option.text = res[index].msisdn;
+                select.add(option);
+            }
+
+            const input = document.getElementById("node-input-from-input");
+            const chevron = document.getElementById("node-input-get-numbers");
+            const edit = document.getElementById("node-input-edit-number");
+            select.style.display = "block";
+            input.style.display = "none";
+            chevron.style.display = "none";
+            edit.style.display = "block";
+
+
+        }, 'json'
+        );
+    }
+
+    function clearnumber() {
+        const input = document.getElementById("node-input-from-input");
+        const chevron = document.getElementById("node-input-get-numbers");
+        const close = document.getElementById("node-input-clear-number");
+        input.value = "";
+        chevron.style.display = "block";
+        close.style.display = "none";
+    }
+    function editnumber() {
+        const input = document.getElementById("node-input-from-input");
+        const select = document.getElementById("node-input-from-select");
+        const chevron = document.getElementById("node-input-get-numbers");
+        const edit = document.getElementById("node-input-edit-number");
+        select.value = "";
+        input.value = "";
+        select.style.display = "none";
+        input.style.display = "block";
+        edit.style.display = "none";
+        chevron.style.display = "block";
+    }
+</script>

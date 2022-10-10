@@ -1,0 +1,69 @@
+<script type="text/javascript">
+    RED.nodes.registerType('sendsms',{
+        category: 'nexmo',
+        color: '#c485db',
+        defaults: {
+          creds: {value:"", type:"nexmobasic"},
+          to: {},
+          fr: {},
+          text:{},
+          unicode: {}
+        },
+        inputs:1,
+        outputs:1,
+        icon: "nexmo.png",
+        label: "Send SMS",
+        paletteLabel: "Send SMS"
+    });
+</script>
+<script type="text/x-red" data-template-name="sendsms">
+  <div class="form-row">
+      <label for="node-config-input-privatekey"></i>Nexmo Credentials</label>
+      <input type="text" id="node-input-creds" >
+  </div>
+  
+  <div class="form-row">
+      <label for="node-input-to"><i class="icon-tag"></i>To {}</label>
+      <input type="text" id="node-input-to" placeholder="destination number">
+  </div>
+  
+  <div class="form-row">
+      <label for="node-input-fr"><i class="icon-tag"></i>From {}</label>
+      <input type="text" id="node-input-fr" placeholder="sender">
+  </div>
+  
+  <div class="form-row">
+      <label for="node-input-text"><i class="icon-tag"></i>Text {}</label>
+      <input type="text" id="node-input-text" placeholder="message text">
+  </div>
+  
+  <div class="form-row">
+      <label for="node-input-unicode"><i class="icon-tag"></i>Unicode</label>
+      <input type="checkbox" id="node-input-unicode">
+  </div>
+  
+</script>
+
+
+<script type="text/x-red" data-help-name="sendsms">
+<p>Send an SMS</p>
+
+<h3>Inputs</h3>
+
+ <h3>Outputs</h3>
+ <dl class="message-properties">
+     <dt>ncco<span class="property-type">object</span></dt>
+     <dd> <code>msg.payload</code> will contain the response from the Nexmo API</dd>
+ </dl>
+
+<h3>Details</h3>
+The to number should always be in e.164 format, that is the full international number without a leading prefix like +, 00 or 001.
+Consult the nexmo documentation for valid From values depending on destination country.
+Set the Unicode flag if the message text contains Unicode parameters
+<h3>References</h3>
+    <ul>
+        <li><a href="https://developer.nexmo.com/messaging/sms/overview">Nexmo Documentation</a></li>
+    </ul>
+</script>
+
+
